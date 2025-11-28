@@ -5,7 +5,6 @@ import PptxGenJS from "pptxgenjs"
 // TYPE DEFINITIONS
 // ============================================
 
-// TODO: Add more slide types as needed (e.g., "two-column", "chart", "table")
 interface TitleSlide {
   type: "title"
   master: "TP_TITLE"
@@ -16,11 +15,9 @@ interface TitleSlide {
 interface ChapterSlide {
   type: "chapter"
   master: "TP_CHAPTER"
-  title: string
   chapterNumber: number
-  // TODO: Upload chapter images to /public/images/chapter/image1.png through image33.png (or .jpg/.jpeg)
-  // Then pass chapterImageNumber (1-33) to select which image to use
-  chapterImageNumber?: number
+  title: string
+  chapterImageNumber?: number // 1-33 for dynamic chapter images
 }
 
 interface ContentSlide {
@@ -37,13 +34,6 @@ interface BulletsSlide {
   items: string[]
 }
 
-interface ImageSlide {
-  type: "image"
-  master: "TP_CONTENT_WHITE" | "TP_CONTENT_BEIGE"
-  title: string
-  imageBase64: string
-}
-
 interface TwoColumnSlide {
   type: "two-column"
   master: "TP_CONTENT_WHITE" | "TP_CONTENT_BEIGE"
@@ -52,7 +42,14 @@ interface TwoColumnSlide {
   rightContent: string
 }
 
-type Slide = TitleSlide | ChapterSlide | ContentSlide | BulletsSlide | ImageSlide | TwoColumnSlide
+interface ImageSlide {
+  type: "image"
+  master: "TP_CONTENT_WHITE" | "TP_CONTENT_BEIGE"
+  title: string
+  imageBase64: string
+}
+
+type Slide = TitleSlide | ChapterSlide | ContentSlide | BulletsSlide | TwoColumnSlide | ImageSlide
 
 interface PresentationRequest {
   title: string
@@ -72,543 +69,462 @@ interface ErrorResponse {
 }
 
 // ============================================
-// CONFIGURATION - CUSTOMIZE THESE VALUES
+// CONFIGURATION
 // ============================================
 
-// TODO: Set your API key in Vercel environment variables for production
 const VALID_API_KEY = process.env.PPT_API_KEY || null
-
-// TODO: Adjust max payload size if needed (currently 10MB)
 const MAX_PAYLOAD_SIZE = 10 * 1024 * 1024
 
-// ============================================
-// BRAND COLORS - TELEPERFORMANCE PALETTE
-// TODO: Update these hex codes to match your brand guidelines
-// ============================================
-const COLORS = {
-  // Primary colors
-  BLACK: "000000",
-  WHITE: "FFFFFF",
-
-  // Neutral colors (from TP brand guidelines)
-  BEIGE: "D4D1CA", // Warm gray background
-  TAUPE: "918D80", // Secondary neutral
-  LIGHT_GRAY: "C2C7CC", // Light accents
-
-  // Accent colors (use sparingly per brand guidelines)
-  PINK: "ED1E81", // For highlights only
-  MAGENTA: "FF0082", // Alternative pink
-
-  // Purple palette (minimal use)
-  PURPLE_DARK: "4C3193",
-  PURPLE_MID: "706297",
-  PURPLE_LIGHT: "848DAC",
-
-  // Text colors
-  DARK_GRAY: "4A4C6A", // For body text on light backgrounds
+// TP Brand Colors
+const TP_COLORS = {
+  black: "000000",
+  white: "FFFFFF",
+  beige: "D4D1CA",
+  darkGray: "4A4C6A",
+  pink: "ED1E81",
+  taupe: "918D80",
 }
 
-// ============================================
-// LOGO URLS - UPDATE AFTER HOSTING ON VERCEL
-// TODO: After deploying to Vercel, update these URLs to your hosted logo files
-// ============================================
-const LOGOS = {
-  // White logo for dark backgrounds
-  WHITE: "/images/gmt-logo-20tp-rgb-feb-202025-white.png",
-  // Black logo for light backgrounds
-  BLACK: "/images/gmt-logo-20tp-rgb-feb-202025-black.png",
-}
+// Logo URLs (direct URLs - no filesystem access needed)
+const LOGO_WHITE_URL = "/images/gmt-logo-20tp-rgb-feb-202025-white.png"
+const LOGO_BLACK_URL = "/images/gmt-logo-20tp-rgb-feb-202025-black.png"
 
-// ============================================
-// CHAPTER IMAGES CONFIGURATION
-// TODO: Upload your 33 chapter images to Vercel Blob or your hosting
-// Format: Replace {N} with the image number (1-33)
-// Supported formats: .png, .jpg, .jpeg
-// ============================================
-const CHAPTER_IMAGE_BASE_URL =
-  process.env.CHAPTER_IMAGE_BASE_URL || "https://your-vercel-domain.vercel.app/images/chapter/"
-
-// Helper function to get chapter image URL
-function getChapterImageUrl(imageNumber: number): string {
-  // TODO: Update this function based on your actual image naming convention
-  // Current expected format: image1.png, image2.jpg, etc.
-  // The API will try .png first, then .jpg, then .jpeg
-  return `${CHAPTER_IMAGE_BASE_URL}image${imageNumber}`
-}
-
-// ============================================
-// FONTS - TELEPERFORMANCE BRAND FONTS
-// TODO: Update font names if your brand uses different fonts
-// Note: Calibri is a Microsoft font, so it should work in PowerPoint
-// ============================================
-const FONTS = {
-  HEADING: "Calibri", // For titles and headings
-  BODY: "Calibri Light", // For body text (lighter weight)
-}
-
-// ============================================
-// SLIDE DIMENSIONS AND POSITIONS
-// TODO: Adjust these values to match your exact slide master layouts
-// All values are in inches
-// ============================================
-const LAYOUT = {
-  // Logo positioning (bottom-left corner)
-  LOGO: {
-    X: 0.3,
-    Y: 4.9,
-    WIDTH: 0.4,
-    HEIGHT: 0.4,
-  },
-  // Footer text position (next to logo)
-  FOOTER: {
-    X: 0.75,
-    Y: 5.05,
-  },
-  // Slide number position
-  SLIDE_NUMBER: {
-    X: 9.2,
-    Y: 5.05,
-  },
-  // Title slide text positions
-  TITLE_SLIDE: {
-    TITLE_Y: 2.0,
-    SUBTITLE_Y: 3.2,
-  },
-  // Content area margins
-  CONTENT: {
-    MARGIN_X: 0.5,
-    MARGIN_TOP: 1.2,
-    WIDTH: 9.0,
-  },
-  // Chapter slide positions
-  CHAPTER: {
-    NUMBER_X: 0.5,
-    NUMBER_Y: 1.5,
-    TITLE_X: 0.5,
-    TITLE_Y: 3.0,
-    IMAGE_X: 6.0,
-    IMAGE_Y: 1.0,
-    IMAGE_WIDTH: 3.5,
-    IMAGE_HEIGHT: 3.5,
-  },
-}
-
-// ============================================
-// SLIDE MASTER DEFINITIONS
-// TODO: Customize colors, positions, and styles to match your templates
-// ============================================
-
-async function defineSlideMasters(pptx: PptxGenJS): Promise<void> {
-  // TP_TITLE - Black background title slide with white logo
-  pptx.defineSlideMaster({
-    title: "TP_TITLE",
-    background: { color: COLORS.BLACK },
-    objects: [
-      // TODO: Add any decorative elements for title slides here
-      // Example: accent lines, shapes, etc.
-    ],
-  })
-
-  // TP_CHAPTER - Chapter/section divider slide
-  pptx.defineSlideMaster({
-    title: "TP_CHAPTER",
-    background: { color: COLORS.WHITE },
-    objects: [
-      // TODO: Add chapter slide decorative elements here
-    ],
-  })
-
-  // TP_CONTENT_WHITE - White background content slide
-  pptx.defineSlideMaster({
-    title: "TP_CONTENT_WHITE",
-    background: { color: COLORS.WHITE },
-    objects: [
-      // Header line at top
-      {
-        rect: {
-          x: 0,
-          y: 0.9,
-          w: "100%",
-          h: 0.02,
-          fill: { color: COLORS.LIGHT_GRAY },
-        },
-      },
-      // Footer line at bottom
-      {
-        rect: {
-          x: 0,
-          y: 4.85,
-          w: "100%",
-          h: 0.01,
-          fill: { color: COLORS.LIGHT_GRAY },
-        },
-      },
-    ],
-  })
-
-  // TP_CONTENT_BEIGE - Beige/warm gray background content slide
-  pptx.defineSlideMaster({
-    title: "TP_CONTENT_BEIGE",
-    background: { color: COLORS.BEIGE },
-    objects: [
-      // Header line at top
-      {
-        rect: {
-          x: 0,
-          y: 0.9,
-          w: "100%",
-          h: 0.02,
-          fill: { color: COLORS.TAUPE },
-        },
-      },
-      // Footer line at bottom
-      {
-        rect: {
-          x: 0,
-          y: 4.85,
-          w: "100%",
-          h: 0.01,
-          fill: { color: COLORS.TAUPE },
-        },
-      },
-    ],
-  })
-}
+// Chapter images base URL - set this env var to your Vercel blob storage URL
+// Example: https://yourdomain.com/images/chapter/
+// Images should be named: image1.png, image2.jpg, etc. (1-33)
+const CHAPTER_IMAGE_BASE_URL = process.env.CHAPTER_IMAGE_BASE_URL || ""
 
 // ============================================
 // HELPER FUNCTIONS
 // ============================================
 
-// Add logo and footer to a slide
-async function addLogoAndFooter(
-  slide: PptxGenJS.Slide,
-  variant: "white" | "black",
-  presentationTitle: string,
-  slideNumber?: number,
-): Promise<void> {
-  const logoUrl = variant === "white" ? LOGOS.WHITE : LOGOS.BLACK
-  const textColor = variant === "white" ? COLORS.WHITE : COLORS.BLACK
-
+async function fetchImageAsBase64(url: string): Promise<string | null> {
   try {
-    // Add logo
-    slide.addImage({
-      path: logoUrl,
-      x: LAYOUT.LOGO.X,
-      y: LAYOUT.LOGO.Y,
-      w: LAYOUT.LOGO.WIDTH,
-      h: LAYOUT.LOGO.HEIGHT,
-    })
+    const response = await fetch(url)
+    if (!response.ok) return null
+    const arrayBuffer = await response.arrayBuffer()
+    const base64 = Buffer.from(arrayBuffer).toString("base64")
+    const contentType = response.headers.get("content-type") || "image/png"
+    return `data:${contentType};base64,${base64}`
   } catch (error) {
-    // TODO: Handle logo loading errors - you may want to log this
-    console.error("Failed to load logo:", error)
+    console.error("Failed to fetch image:", url, error)
+    return null
+  }
+}
+
+async function getChapterImageUrl(imageNumber: number): Promise<string | null> {
+  if (!CHAPTER_IMAGE_BASE_URL || imageNumber < 1 || imageNumber > 33) {
+    return null
   }
 
-  // Add "tp.com" text next to logo
-  slide.addText("tp.com", {
-    x: LAYOUT.FOOTER.X,
-    y: LAYOUT.FOOTER.Y,
-    fontSize: 8,
-    fontFace: FONTS.BODY,
-    color: textColor,
-  })
-
-  // Add presentation title in footer (center)
-  slide.addText(presentationTitle, {
-    x: 3,
-    y: LAYOUT.FOOTER.Y,
-    w: 4,
-    fontSize: 8,
-    fontFace: FONTS.BODY,
-    color: textColor,
-    align: "center",
-  })
-
-  // Add slide number (if provided)
-  if (slideNumber !== undefined) {
-    slide.addText(String(slideNumber), {
-      x: LAYOUT.SLIDE_NUMBER.X,
-      y: LAYOUT.SLIDE_NUMBER.Y,
-      fontSize: 8,
-      fontFace: FONTS.BODY,
-      color: textColor,
-    })
+  // Try different extensions
+  const extensions = ["png", "jpg", "jpeg"]
+  for (const ext of extensions) {
+    const url = `${CHAPTER_IMAGE_BASE_URL}/image${imageNumber}.${ext}`
+    try {
+      const response = await fetch(url, { method: "HEAD" })
+      if (response.ok) {
+        return url
+      }
+    } catch {
+      continue
+    }
   }
+  return null
+}
+
+// ============================================
+// SLIDE MASTER DEFINITIONS
+// ============================================
+
+function defineSlideMasters(pptx: PptxGenJS): void {
+  // TP_TITLE - Black background title slide
+  pptx.defineSlideMaster({
+    title: "TP_TITLE",
+    background: { color: TP_COLORS.black },
+  })
+
+  // TP_CHAPTER - Chapter divider slide
+  pptx.defineSlideMaster({
+    title: "TP_CHAPTER",
+    background: { color: TP_COLORS.black },
+  })
+
+  // TP_CONTENT_WHITE - White background content
+  pptx.defineSlideMaster({
+    title: "TP_CONTENT_WHITE",
+    background: { color: TP_COLORS.white },
+    slideNumber: { x: 9.3, y: 5.2, color: TP_COLORS.darkGray, fontSize: 10 },
+  })
+
+  // TP_CONTENT_BEIGE - Beige background content
+  pptx.defineSlideMaster({
+    title: "TP_CONTENT_BEIGE",
+    background: { color: TP_COLORS.beige },
+    slideNumber: { x: 9.3, y: 5.2, color: TP_COLORS.darkGray, fontSize: 10 },
+  })
 }
 
 // ============================================
 // SLIDE BUILDERS
-// TODO: Customize each slide builder to match your exact template layouts
 // ============================================
 
-async function addTitleSlide(pptx: PptxGenJS, slide: TitleSlide, presentationTitle: string): Promise<void> {
+async function addTitleSlide(pptx: PptxGenJS, slide: TitleSlide): Promise<void> {
   const pptSlide = pptx.addSlide({ masterName: "TP_TITLE" })
 
-  // Main title - white text on black background
+  // Main title
   pptSlide.addText(slide.title, {
-    x: LAYOUT.CONTENT.MARGIN_X,
-    y: LAYOUT.TITLE_SLIDE.TITLE_Y,
-    w: LAYOUT.CONTENT.WIDTH,
-    h: 1.0,
+    x: 0.5,
+    y: 2.2,
+    w: 9,
+    h: 1.2,
     fontSize: 44,
-    fontFace: FONTS.HEADING,
-    color: COLORS.WHITE,
+    fontFace: "Calibri",
+    color: TP_COLORS.white,
     bold: true,
     align: "left",
     valign: "middle",
   })
 
-  // Subtitle (optional) - can use accent color
+  // Subtitle
   if (slide.subtitle) {
     pptSlide.addText(slide.subtitle, {
-      x: LAYOUT.CONTENT.MARGIN_X,
-      y: LAYOUT.TITLE_SLIDE.SUBTITLE_Y,
-      w: LAYOUT.CONTENT.WIDTH,
-      h: 0.6,
+      x: 0.5,
+      y: 3.4,
+      w: 9,
+      h: 0.8,
       fontSize: 24,
-      fontFace: FONTS.BODY,
-      // TODO: Change subtitle color if needed (currently using light gray)
-      color: COLORS.LIGHT_GRAY,
+      fontFace: "Calibri Light",
+      color: TP_COLORS.beige,
       align: "left",
       valign: "middle",
     })
   }
 
-  // Add white logo for dark background
-  await addLogoAndFooter(pptSlide, "white", presentationTitle)
+  // Add white logo
+  const logoBase64 = await fetchImageAsBase64(LOGO_WHITE_URL)
+  if (logoBase64) {
+    pptSlide.addImage({
+      data: logoBase64,
+      x: 0.3,
+      y: 4.8,
+      w: 0.5,
+      h: 0.5,
+    })
+  }
+
+  // Add tp.com text
+  pptSlide.addText("tp.com", {
+    x: 0.85,
+    y: 4.95,
+    w: 1,
+    h: 0.3,
+    fontSize: 10,
+    fontFace: "Calibri",
+    color: TP_COLORS.white,
+  })
 }
 
-async function addChapterSlide(
-  pptx: PptxGenJS,
-  slide: ChapterSlide,
-  presentationTitle: string,
-  slideNumber: number,
-): Promise<void> {
+async function addChapterSlide(pptx: PptxGenJS, slide: ChapterSlide): Promise<void> {
   const pptSlide = pptx.addSlide({ masterName: "TP_CHAPTER" })
 
   // Large chapter number (formatted as 01, 02, etc.)
-  const formattedNumber = String(slide.chapterNumber).padStart(2, "0")
+  const formattedNumber = slide.chapterNumber.toString().padStart(2, "0")
   pptSlide.addText(formattedNumber, {
-    x: LAYOUT.CHAPTER.NUMBER_X,
-    y: LAYOUT.CHAPTER.NUMBER_Y,
+    x: 0.5,
+    y: 1.5,
     w: 3,
-    h: 1.5,
-    fontSize: 72,
-    fontFace: FONTS.HEADING,
-    color: COLORS.BLACK,
+    h: 2,
+    fontSize: 120,
+    fontFace: "Calibri",
+    color: TP_COLORS.white,
     bold: true,
   })
 
   // Chapter title
   pptSlide.addText(slide.title, {
-    x: LAYOUT.CHAPTER.TITLE_X,
-    y: LAYOUT.CHAPTER.TITLE_Y,
+    x: 0.5,
+    y: 3.5,
     w: 5,
-    h: 1.0,
+    h: 1,
     fontSize: 32,
-    fontFace: FONTS.HEADING,
-    color: COLORS.BLACK,
+    fontFace: "Calibri",
+    color: TP_COLORS.white,
     bold: true,
   })
 
-  // Chapter image (if specified)
-  // TODO: Ensure your chapter images are uploaded to the correct location
-  if (slide.chapterImageNumber && slide.chapterImageNumber >= 1 && slide.chapterImageNumber <= 33) {
-    try {
-      const imageUrl = getChapterImageUrl(slide.chapterImageNumber)
-      // Try loading the image - it may be .png, .jpg, or .jpeg
-      pptSlide.addImage({
-        path: `${imageUrl}.png`,
-        x: LAYOUT.CHAPTER.IMAGE_X,
-        y: LAYOUT.CHAPTER.IMAGE_Y,
-        w: LAYOUT.CHAPTER.IMAGE_WIDTH,
-        h: LAYOUT.CHAPTER.IMAGE_HEIGHT,
-        sizing: { type: "contain", w: LAYOUT.CHAPTER.IMAGE_WIDTH, h: LAYOUT.CHAPTER.IMAGE_HEIGHT },
-      })
-    } catch {
-      // If .png fails, the image might not exist or be in different format
-      // TODO: Add fallback logic for .jpg/.jpeg if needed
-      console.warn(`Chapter image ${slide.chapterImageNumber} not found`)
+  // Add chapter image if specified
+  if (slide.chapterImageNumber && CHAPTER_IMAGE_BASE_URL) {
+    const imageUrl = await getChapterImageUrl(slide.chapterImageNumber)
+    if (imageUrl) {
+      const imageBase64 = await fetchImageAsBase64(imageUrl)
+      if (imageBase64) {
+        pptSlide.addImage({
+          data: imageBase64,
+          x: 5.5,
+          y: 0.5,
+          w: 4,
+          h: 4.5,
+          sizing: { type: "contain", w: 4, h: 4.5 },
+        })
+      }
     }
   }
 
-  // Add black logo for light background
-  await addLogoAndFooter(pptSlide, "black", presentationTitle, slideNumber)
+  // Add white logo
+  const logoBase64 = await fetchImageAsBase64(LOGO_WHITE_URL)
+  if (logoBase64) {
+    pptSlide.addImage({
+      data: logoBase64,
+      x: 0.3,
+      y: 4.8,
+      w: 0.5,
+      h: 0.5,
+    })
+  }
+
+  pptSlide.addText("tp.com", {
+    x: 0.85,
+    y: 4.95,
+    w: 1,
+    h: 0.3,
+    fontSize: 10,
+    fontFace: "Calibri",
+    color: TP_COLORS.white,
+  })
 }
 
-async function addContentSlide(
-  pptx: PptxGenJS,
-  slide: ContentSlide,
-  presentationTitle: string,
-  slideNumber: number,
-): Promise<void> {
+async function addContentSlide(pptx: PptxGenJS, slide: ContentSlide): Promise<void> {
   const pptSlide = pptx.addSlide({ masterName: slide.master })
   const isBeige = slide.master === "TP_CONTENT_BEIGE"
-  const textColor = COLORS.DARK_GRAY
+  const textColor = TP_COLORS.black
 
-  // Slide title
+  // Title
   pptSlide.addText(slide.title, {
-    x: LAYOUT.CONTENT.MARGIN_X,
+    x: 0.5,
     y: 0.3,
-    w: LAYOUT.CONTENT.WIDTH,
-    h: 0.5,
-    fontSize: 24,
-    fontFace: FONTS.HEADING,
+    w: 9,
+    h: 0.6,
+    fontSize: 28,
+    fontFace: "Calibri",
     color: textColor,
     bold: true,
   })
 
-  // Content body
+  // Content
   pptSlide.addText(slide.content, {
-    x: LAYOUT.CONTENT.MARGIN_X,
-    y: LAYOUT.CONTENT.MARGIN_TOP,
-    w: LAYOUT.CONTENT.WIDTH,
+    x: 0.5,
+    y: 1.2,
+    w: 9,
     h: 3.5,
-    fontSize: 14,
-    fontFace: FONTS.BODY,
+    fontSize: 16,
+    fontFace: "Calibri Light",
     color: textColor,
     valign: "top",
-    paraSpaceAfter: 10,
+    paraSpaceAfter: 12,
   })
 
-  // Add black logo for light background
-  await addLogoAndFooter(pptSlide, "black", presentationTitle, slideNumber)
+  // Add black logo
+  const logoBase64 = await fetchImageAsBase64(LOGO_BLACK_URL)
+  if (logoBase64) {
+    pptSlide.addImage({
+      data: logoBase64,
+      x: 0.3,
+      y: 4.8,
+      w: 0.5,
+      h: 0.5,
+    })
+  }
+
+  pptSlide.addText("tp.com", {
+    x: 0.85,
+    y: 4.95,
+    w: 1,
+    h: 0.3,
+    fontSize: 10,
+    fontFace: "Calibri",
+    color: TP_COLORS.darkGray,
+  })
 }
 
-async function addBulletsSlide(
-  pptx: PptxGenJS,
-  slide: BulletsSlide,
-  presentationTitle: string,
-  slideNumber: number,
-): Promise<void> {
+async function addBulletsSlide(pptx: PptxGenJS, slide: BulletsSlide): Promise<void> {
   const pptSlide = pptx.addSlide({ masterName: slide.master })
-  const textColor = COLORS.DARK_GRAY
+  const textColor = TP_COLORS.black
 
-  // Slide title
+  // Title
   pptSlide.addText(slide.title, {
-    x: LAYOUT.CONTENT.MARGIN_X,
+    x: 0.5,
     y: 0.3,
-    w: LAYOUT.CONTENT.WIDTH,
-    h: 0.5,
-    fontSize: 24,
-    fontFace: FONTS.HEADING,
+    w: 9,
+    h: 0.6,
+    fontSize: 28,
+    fontFace: "Calibri",
     color: textColor,
     bold: true,
   })
 
   // Bullet points
-  // TODO: Customize bullet color - currently using pink accent per brand guidelines
   const bulletItems = slide.items.map((item) => ({
     text: item,
     options: {
-      bullet: { type: "bullet" as const, color: COLORS.PINK },
-      paraSpaceBefore: 6,
-      paraSpaceAfter: 6,
+      bullet: { type: "bullet" as const, color: TP_COLORS.pink },
+      paraSpaceBefore: 8,
+      paraSpaceAfter: 8,
     },
   }))
 
   pptSlide.addText(bulletItems, {
-    x: LAYOUT.CONTENT.MARGIN_X,
-    y: LAYOUT.CONTENT.MARGIN_TOP,
-    w: LAYOUT.CONTENT.WIDTH,
+    x: 0.5,
+    y: 1.2,
+    w: 9,
     h: 3.5,
-    fontSize: 14,
-    fontFace: FONTS.BODY,
+    fontSize: 18,
+    fontFace: "Calibri Light",
     color: textColor,
     valign: "top",
   })
 
-  await addLogoAndFooter(pptSlide, "black", presentationTitle, slideNumber)
+  // Add black logo
+  const logoBase64 = await fetchImageAsBase64(LOGO_BLACK_URL)
+  if (logoBase64) {
+    pptSlide.addImage({
+      data: logoBase64,
+      x: 0.3,
+      y: 4.8,
+      w: 0.5,
+      h: 0.5,
+    })
+  }
+
+  pptSlide.addText("tp.com", {
+    x: 0.85,
+    y: 4.95,
+    w: 1,
+    h: 0.3,
+    fontSize: 10,
+    fontFace: "Calibri",
+    color: TP_COLORS.darkGray,
+  })
 }
 
-async function addImageSlide(
-  pptx: PptxGenJS,
-  slide: ImageSlide,
-  presentationTitle: string,
-  slideNumber: number,
-): Promise<void> {
+async function addTwoColumnSlide(pptx: PptxGenJS, slide: TwoColumnSlide): Promise<void> {
   const pptSlide = pptx.addSlide({ masterName: slide.master })
-  const textColor = COLORS.DARK_GRAY
+  const textColor = TP_COLORS.black
 
-  // Slide title
+  // Title
   pptSlide.addText(slide.title, {
-    x: LAYOUT.CONTENT.MARGIN_X,
+    x: 0.5,
     y: 0.3,
-    w: LAYOUT.CONTENT.WIDTH,
-    h: 0.5,
-    fontSize: 24,
-    fontFace: FONTS.HEADING,
-    color: textColor,
-    bold: true,
-  })
-
-  // Image - ensure proper base64 format
-  const imageData = slide.imageBase64.includes("base64,")
-    ? slide.imageBase64
-    : `data:image/png;base64,${slide.imageBase64}`
-
-  pptSlide.addImage({
-    data: imageData,
-    x: 1.0,
-    y: LAYOUT.CONTENT.MARGIN_TOP,
-    w: 8.0,
-    h: 3.5,
-    sizing: { type: "contain", w: 8.0, h: 3.5 },
-  })
-
-  await addLogoAndFooter(pptSlide, "black", presentationTitle, slideNumber)
-}
-
-async function addTwoColumnSlide(
-  pptx: PptxGenJS,
-  slide: TwoColumnSlide,
-  presentationTitle: string,
-  slideNumber: number,
-): Promise<void> {
-  const pptSlide = pptx.addSlide({ masterName: slide.master })
-  const textColor = COLORS.DARK_GRAY
-
-  // Slide title
-  pptSlide.addText(slide.title, {
-    x: LAYOUT.CONTENT.MARGIN_X,
-    y: 0.3,
-    w: LAYOUT.CONTENT.WIDTH,
-    h: 0.5,
-    fontSize: 24,
-    fontFace: FONTS.HEADING,
+    w: 9,
+    h: 0.6,
+    fontSize: 28,
+    fontFace: "Calibri",
     color: textColor,
     bold: true,
   })
 
   // Left column
   pptSlide.addText(slide.leftContent, {
-    x: LAYOUT.CONTENT.MARGIN_X,
-    y: LAYOUT.CONTENT.MARGIN_TOP,
-    w: 4.2,
+    x: 0.5,
+    y: 1.2,
+    w: 4.3,
     h: 3.5,
-    fontSize: 14,
-    fontFace: FONTS.BODY,
+    fontSize: 16,
+    fontFace: "Calibri Light",
     color: textColor,
     valign: "top",
   })
 
   // Right column
   pptSlide.addText(slide.rightContent, {
-    x: 5.0,
-    y: LAYOUT.CONTENT.MARGIN_TOP,
-    w: 4.2,
+    x: 5.2,
+    y: 1.2,
+    w: 4.3,
     h: 3.5,
-    fontSize: 14,
-    fontFace: FONTS.BODY,
+    fontSize: 16,
+    fontFace: "Calibri Light",
     color: textColor,
     valign: "top",
   })
 
-  await addLogoAndFooter(pptSlide, "black", presentationTitle, slideNumber)
+  // Add black logo
+  const logoBase64 = await fetchImageAsBase64(LOGO_BLACK_URL)
+  if (logoBase64) {
+    pptSlide.addImage({
+      data: logoBase64,
+      x: 0.3,
+      y: 4.8,
+      w: 0.5,
+      h: 0.5,
+    })
+  }
+
+  pptSlide.addText("tp.com", {
+    x: 0.85,
+    y: 4.95,
+    w: 1,
+    h: 0.3,
+    fontSize: 10,
+    fontFace: "Calibri",
+    color: TP_COLORS.darkGray,
+  })
+}
+
+async function addImageSlide(pptx: PptxGenJS, slide: ImageSlide): Promise<void> {
+  const pptSlide = pptx.addSlide({ masterName: slide.master })
+  const textColor = TP_COLORS.black
+
+  // Title
+  pptSlide.addText(slide.title, {
+    x: 0.5,
+    y: 0.3,
+    w: 9,
+    h: 0.6,
+    fontSize: 28,
+    fontFace: "Calibri",
+    color: textColor,
+    bold: true,
+  })
+
+  // Image
+  const imageData = slide.imageBase64.includes("base64,")
+    ? slide.imageBase64
+    : `data:image/png;base64,${slide.imageBase64}`
+
+  pptSlide.addImage({
+    data: imageData,
+    x: 1,
+    y: 1.2,
+    w: 8,
+    h: 3.5,
+    sizing: { type: "contain", w: 8, h: 3.5 },
+  })
+
+  // Add black logo
+  const logoBase64 = await fetchImageAsBase64(LOGO_BLACK_URL)
+  if (logoBase64) {
+    pptSlide.addImage({
+      data: logoBase64,
+      x: 0.3,
+      y: 4.8,
+      w: 0.5,
+      h: 0.5,
+    })
+  }
+
+  pptSlide.addText("tp.com", {
+    x: 0.85,
+    y: 4.95,
+    w: 1,
+    h: 0.3,
+    fontSize: 10,
+    fontFace: "Calibri",
+    color: TP_COLORS.darkGray,
+  })
 }
 
 // ============================================
 // VALIDATION
-// TODO: Add validation for any new slide types you create
 // ============================================
 
 function validateRequest(
@@ -649,20 +565,30 @@ function validateRequest(
     }
   }
 
-  // Valid slide types - add new types here when you create them
-  const validSlideTypes = ["title", "chapter", "content", "bullets", "image", "two-column"]
+  const validTypes = ["title", "chapter", "content", "bullets", "two-column", "image"]
+  const validMasters = ["TP_TITLE", "TP_CHAPTER", "TP_CONTENT_WHITE", "TP_CONTENT_BEIGE"]
 
-  // Validate each slide
   for (let i = 0; i < req.slides.length; i++) {
     const slide = req.slides[i] as Record<string, unknown>
 
-    if (!slide.type || !validSlideTypes.includes(slide.type as string)) {
+    if (!slide.type || !validTypes.includes(slide.type as string)) {
       return {
         valid: false,
         error: {
           error: `Invalid slide type at index ${i}`,
           code: "INVALID_SLIDE_TYPE",
-          details: `Slide type must be one of: ${validSlideTypes.join(", ")}`,
+          details: `Slide type must be one of: ${validTypes.join(", ")}`,
+        },
+      }
+    }
+
+    if (!slide.master || !validMasters.includes(slide.master as string)) {
+      return {
+        valid: false,
+        error: {
+          error: `Invalid master at index ${i}`,
+          code: "INVALID_MASTER",
+          details: `Master must be one of: ${validMasters.join(", ")}`,
         },
       }
     }
@@ -698,16 +624,6 @@ function validateRequest(
       }
     }
 
-    if (slide.type === "image" && typeof slide.imageBase64 !== "string") {
-      return {
-        valid: false,
-        error: {
-          error: `Missing imageBase64 in image slide at index ${i}`,
-          code: "MISSING_IMAGE",
-        },
-      }
-    }
-
     if (slide.type === "chapter" && typeof slide.chapterNumber !== "number") {
       return {
         valid: false,
@@ -729,6 +645,16 @@ function validateRequest(
         }
       }
     }
+
+    if (slide.type === "image" && typeof slide.imageBase64 !== "string") {
+      return {
+        valid: false,
+        error: {
+          error: `Missing imageBase64 in image slide at index ${i}`,
+          code: "MISSING_IMAGE",
+        },
+      }
+    }
   }
 
   return { valid: true, data: req as unknown as PresentationRequest }
@@ -740,7 +666,6 @@ function validateRequest(
 
 export async function POST(request: NextRequest): Promise<NextResponse<PresentationResponse | ErrorResponse>> {
   try {
-    // Check content length
     const contentLength = request.headers.get("content-length")
     if (contentLength && Number.parseInt(contentLength) > MAX_PAYLOAD_SIZE) {
       return NextResponse.json(
@@ -753,7 +678,6 @@ export async function POST(request: NextRequest): Promise<NextResponse<Presentat
       )
     }
 
-    // Parse request body
     let body: unknown
     try {
       body = await request.json()
@@ -768,7 +692,6 @@ export async function POST(request: NextRequest): Promise<NextResponse<Presentat
       )
     }
 
-    // API Key authentication (optional - enable by setting PPT_API_KEY env var)
     if (VALID_API_KEY) {
       const apiKey = (body as Record<string, unknown>)?.apiKey || request.headers.get("x-api-key")
       if (apiKey !== VALID_API_KEY) {
@@ -783,7 +706,6 @@ export async function POST(request: NextRequest): Promise<NextResponse<Presentat
       }
     }
 
-    // Validate request
     const validation = validateRequest(body)
     if (!validation.valid) {
       return NextResponse.json(validation.error, { status: 400 })
@@ -791,47 +713,39 @@ export async function POST(request: NextRequest): Promise<NextResponse<Presentat
 
     const { title, slides } = validation.data
 
-    // Create presentation
     const pptx = new PptxGenJS()
     pptx.title = title
-    // TODO: Update author and company name
-    pptx.author = "Teleperformance"
+    pptx.author = "TP PPT Generator"
     pptx.company = "Teleperformance"
     pptx.layout = "LAYOUT_16x9"
 
-    // Define slide masters
-    await defineSlideMasters(pptx)
+    defineSlideMasters(pptx)
 
-    // Build slides
-    let slideNumber = 1
+    // Build slides (async for image fetching)
     for (const slide of slides) {
       switch (slide.type) {
         case "title":
-          await addTitleSlide(pptx, slide, title)
+          await addTitleSlide(pptx, slide)
           break
         case "chapter":
-          await addChapterSlide(pptx, slide, title, slideNumber)
+          await addChapterSlide(pptx, slide)
           break
         case "content":
-          await addContentSlide(pptx, slide, title, slideNumber)
+          await addContentSlide(pptx, slide)
           break
         case "bullets":
-          await addBulletsSlide(pptx, slide, title, slideNumber)
-          break
-        case "image":
-          await addImageSlide(pptx, slide, title, slideNumber)
+          await addBulletsSlide(pptx, slide)
           break
         case "two-column":
-          await addTwoColumnSlide(pptx, slide, title, slideNumber)
+          await addTwoColumnSlide(pptx, slide)
+          break
+        case "image":
+          await addImageSlide(pptx, slide)
           break
       }
-      slideNumber++
     }
 
-    // Generate file as base64
     const base64Data = await pptx.write({ outputType: "base64" })
-
-    // Generate filename
     const sanitizedTitle = title.replace(/[^a-zA-Z0-9]/g, "_").substring(0, 50)
     const fileName = `${sanitizedTitle}_${Date.now()}.pptx`
 
@@ -852,21 +766,16 @@ export async function POST(request: NextRequest): Promise<NextResponse<Presentat
   }
 }
 
-// ============================================
-// HEALTH CHECK / API INFO ENDPOINT
-// ============================================
-
 export async function GET(): Promise<NextResponse> {
   return NextResponse.json({
     status: "ok",
-    service: "PPT Generator API - Teleperformance",
+    service: "TP PPT Generator API",
     version: "2.0.0",
     endpoints: {
       POST: "/api/generate-ppt",
     },
-    // TODO: Update this list when you add new slide types
-    supportedSlideTypes: ["title", "chapter", "content", "bullets", "image", "two-column"],
+    supportedSlideTypes: ["title", "chapter", "content", "bullets", "two-column", "image"],
     slideMasters: ["TP_TITLE", "TP_CHAPTER", "TP_CONTENT_WHITE", "TP_CONTENT_BEIGE"],
-    brandColors: COLORS,
+    chapterImagesConfigured: !!CHAPTER_IMAGE_BASE_URL,
   })
 }
