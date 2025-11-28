@@ -69,8 +69,6 @@ module.exports = mod;
 "use strict";
 
 __turbopack_context__.s([
-    "GET",
-    ()=>GET,
     "POST",
     ()=>POST
 ]);
@@ -97,7 +95,6 @@ const TP_COLORS = {
 const STATIC_ASSET_BASE_URL = process.env.STATIC_ASSET_BASE_URL || process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
 const LOGO_WHITE_URL = "/images/gmt-logo-20tp-rgb-feb-202025-white.png";
 const LOGO_BLACK_URL = "/images/gmt-logo-20tp-rgb-feb-202025-black.png";
-// Chapter images base URL - set this env var to your hosted images URL
 const CHAPTER_IMAGE_BASE_URL = process.env.CHAPTER_IMAGE_BASE_URL || "";
 // ============================================
 // HELPER FUNCTIONS
@@ -129,7 +126,6 @@ async function getChapterImageBase64(imageNumber) {
     if (!CHAPTER_IMAGE_BASE_URL || imageNumber < 1 || imageNumber > 33) {
         return null;
     }
-    // Try different extensions
     const extensions = [
         "png",
         "jpg",
@@ -149,7 +145,7 @@ function defineSlideMasters(pptx) {
     pptx.defineSlideMaster({
         title: "TP_TITLE",
         background: {
-            color: TP_COLORS.black
+            color: TP_COLORS.white
         }
     });
     pptx.defineSlideMaster({
@@ -174,75 +170,67 @@ function defineSlideMasters(pptx) {
 // ============================================
 // FOOTER HELPER - Adds consistent footer to content slides
 // ============================================
-async function addContentFooter(pptSlide, presentationTitle, slideNumber, useDarkLogo = true) {
+async function addContentFooter(pptSlide, presentationTitle, slideNumber) {
     pptSlide.addShape("line", {
         x: 0.3,
         y: 5.0,
         w: 9.4,
         h: 0,
         line: {
-            color: TP_COLORS.lightGray,
+            color: TP_COLORS.black,
             width: 0.5
         }
     });
-    const logoUrl = useDarkLogo ? LOGO_BLACK_URL : LOGO_WHITE_URL;
-    const logoBase64 = await fetchImageAsBase64(logoUrl);
+    // Black logo for white/beige backgrounds
+    const logoBase64 = await fetchImageAsBase64(LOGO_BLACK_URL);
     if (logoBase64) {
         pptSlide.addImage({
             data: logoBase64,
             x: 0.3,
             y: 5.1,
-            w: 0.25,
-            h: 0.25
+            w: 0.2,
+            h: 0.2
         });
     }
     pptSlide.addText("tp.com", {
-        x: 0.6,
-        y: 5.12,
-        w: 0.6,
-        h: 0.2,
-        fontSize: 8,
-        fontFace: "Calibri",
-        color: useDarkLogo ? TP_COLORS.gray : TP_COLORS.white
-    });
-    pptSlide.addShape("line", {
-        x: 8.4,
+        x: 0.55,
         y: 5.1,
-        w: 0,
-        h: 0.25,
-        line: {
-            color: TP_COLORS.lightGray,
-            width: 0.5
-        }
-    });
-    pptSlide.addText(presentationTitle, {
-        x: 6.5,
-        y: 5.12,
-        w: 1.8,
-        h: 0.2,
-        fontSize: 8,
-        fontFace: "Calibri",
-        color: useDarkLogo ? TP_COLORS.gray : TP_COLORS.white,
-        align: "right"
-    });
-    pptSlide.addShape("line", {
-        x: 8.6,
-        y: 5.1,
-        w: 0,
-        h: 0.25,
-        line: {
-            color: TP_COLORS.lightGray,
-            width: 0.5
-        }
-    });
-    pptSlide.addText(slideNumber.toString(), {
-        x: 8.7,
-        y: 5.12,
         w: 0.5,
         h: 0.2,
-        fontSize: 8,
+        fontSize: 7,
         fontFace: "Calibri",
-        color: useDarkLogo ? TP_COLORS.gray : TP_COLORS.white,
+        color: TP_COLORS.black
+    });
+    pptSlide.addText(presentationTitle, {
+        x: 7.0,
+        y: 5.1,
+        w: 2.0,
+        h: 0.2,
+        fontSize: 7,
+        fontFace: "Calibri",
+        color: TP_COLORS.black,
+        align: "right"
+    });
+    // Single vertical line separator
+    pptSlide.addShape("line", {
+        x: 9.1,
+        y: 5.08,
+        w: 0,
+        h: 0.22,
+        line: {
+            color: TP_COLORS.black,
+            width: 0.5
+        }
+    });
+    // Page number
+    pptSlide.addText(slideNumber.toString(), {
+        x: 9.2,
+        y: 5.1,
+        w: 0.4,
+        h: 0.2,
+        fontSize: 7,
+        fontFace: "Calibri",
+        color: TP_COLORS.black,
         align: "center"
     });
 }
@@ -253,7 +241,7 @@ async function addTitleSlide(pptx, slide) {
     const pptSlide = pptx.addSlide({
         masterName: "TP_TITLE"
     });
-    // Main title
+    // Main title - black text on white background
     pptSlide.addText(slide.title, {
         x: 0.5,
         y: 2.2,
@@ -261,12 +249,12 @@ async function addTitleSlide(pptx, slide) {
         h: 1.2,
         fontSize: 44,
         fontFace: "Calibri",
-        color: TP_COLORS.white,
+        color: TP_COLORS.black,
         bold: true,
         align: "left",
         valign: "middle"
     });
-    // Subtitle
+    // Subtitle - gray text
     if (slide.subtitle) {
         pptSlide.addText(slide.subtitle, {
             x: 0.5,
@@ -275,36 +263,48 @@ async function addTitleSlide(pptx, slide) {
             h: 0.8,
             fontSize: 24,
             fontFace: "Calibri Light",
-            color: TP_COLORS.beige,
+            color: TP_COLORS.gray,
             align: "left",
             valign: "middle"
         });
     }
-    // White logo - smaller
-    const logoBase64 = await fetchImageAsBase64(LOGO_WHITE_URL);
+    // Black line at bottom
+    pptSlide.addShape("line", {
+        x: 0.3,
+        y: 5.0,
+        w: 9.4,
+        h: 0,
+        line: {
+            color: TP_COLORS.black,
+            width: 0.5
+        }
+    });
+    // Black logo
+    const logoBase64 = await fetchImageAsBase64(LOGO_BLACK_URL);
     if (logoBase64) {
         pptSlide.addImage({
             data: logoBase64,
             x: 0.3,
             y: 5.1,
-            w: 0.25,
-            h: 0.25
+            w: 0.2,
+            h: 0.2
         });
     }
     pptSlide.addText("tp.com", {
-        x: 0.6,
-        y: 5.12,
-        w: 0.6,
+        x: 0.55,
+        y: 5.1,
+        w: 0.5,
         h: 0.2,
-        fontSize: 8,
+        fontSize: 7,
         fontFace: "Calibri",
-        color: TP_COLORS.white
+        color: TP_COLORS.black
     });
 }
 async function addChapterSlide(pptx, slide) {
     const pptSlide = pptx.addSlide({
         masterName: "TP_CHAPTER"
     });
+    // Right purple panel
     pptSlide.addShape("rect", {
         x: 5,
         y: 0,
@@ -317,6 +317,7 @@ async function addChapterSlide(pptx, slide) {
             color: TP_COLORS.purple
         }
     });
+    // Left side - chapter image or placeholder
     let hasImage = false;
     if (slide.chapterImageBase64) {
         const imageData = slide.chapterImageBase64.includes("base64,") ? slide.chapterImageBase64 : `data:image/png;base64,${slide.chapterImageBase64}`;
@@ -351,7 +352,7 @@ async function addChapterSlide(pptx, slide) {
             hasImage = true;
         }
     }
-    // If no image, add a subtle gray placeholder on left
+    // If no image, add beige placeholder
     if (!hasImage) {
         pptSlide.addShape("rect", {
             x: 0,
@@ -363,6 +364,7 @@ async function addChapterSlide(pptx, slide) {
             }
         });
     }
+    // White logo top-right
     const logoBase64 = await fetchImageAsBase64(LOGO_WHITE_URL);
     if (logoBase64) {
         pptSlide.addImage({
@@ -373,6 +375,7 @@ async function addChapterSlide(pptx, slide) {
             h: 0.4
         });
     }
+    // Chapter number
     const formattedNumber = slide.chapterNumber.toString().padStart(2, "0");
     pptSlide.addText(formattedNumber, {
         x: 5.3,
@@ -384,6 +387,7 @@ async function addChapterSlide(pptx, slide) {
         color: TP_COLORS.purpleLight,
         align: "right"
     });
+    // Dashed border around title
     pptSlide.addShape("rect", {
         x: 5.5,
         y: 2.5,
@@ -398,6 +402,7 @@ async function addChapterSlide(pptx, slide) {
             dashType: "dash"
         }
     });
+    // Title text
     pptSlide.addText(slide.title, {
         x: 5.6,
         y: 2.6,
@@ -410,8 +415,8 @@ async function addChapterSlide(pptx, slide) {
         valign: "middle",
         italic: true
     });
+    // Subtitle with line above
     if (slide.subtitle) {
-        // Line above subtitle
         pptSlide.addShape("line", {
             x: 5.5,
             y: 4.0,
@@ -433,6 +438,7 @@ async function addChapterSlide(pptx, slide) {
             align: "center"
         });
     }
+    // Pink bar at bottom
     pptSlide.addShape("rect", {
         x: 5,
         y: 5.43,
@@ -463,7 +469,6 @@ async function addContentSlide(pptx, slide, presentationTitle, slideNumber) {
         });
         yOffset += 0.35;
     }
-    // Title
     pptSlide.addText(slide.title, {
         x: 0.5,
         y: yOffset,
@@ -474,7 +479,6 @@ async function addContentSlide(pptx, slide, presentationTitle, slideNumber) {
         color: TP_COLORS.black,
         bold: true
     });
-    // Content
     pptSlide.addText(slide.content, {
         x: 0.5,
         y: yOffset + 0.9,
@@ -486,7 +490,7 @@ async function addContentSlide(pptx, slide, presentationTitle, slideNumber) {
         valign: "top",
         paraSpaceAfter: 12
     });
-    await addContentFooter(pptSlide, presentationTitle, slideNumber, true);
+    await addContentFooter(pptSlide, presentationTitle, slideNumber);
 }
 async function addBulletsSlide(pptx, slide, presentationTitle, slideNumber) {
     const pptSlide = pptx.addSlide({
@@ -505,7 +509,6 @@ async function addBulletsSlide(pptx, slide, presentationTitle, slideNumber) {
         });
         yOffset += 0.35;
     }
-    // Title
     pptSlide.addText(slide.title, {
         x: 0.5,
         y: yOffset,
@@ -516,7 +519,6 @@ async function addBulletsSlide(pptx, slide, presentationTitle, slideNumber) {
         color: TP_COLORS.black,
         bold: true
     });
-    // Bullet points
     const bulletItems = slide.items.map((item)=>({
             text: item,
             options: {
@@ -538,7 +540,7 @@ async function addBulletsSlide(pptx, slide, presentationTitle, slideNumber) {
         color: TP_COLORS.black,
         valign: "top"
     });
-    await addContentFooter(pptSlide, presentationTitle, slideNumber, true);
+    await addContentFooter(pptSlide, presentationTitle, slideNumber);
 }
 async function addTwoColumnSlide(pptx, slide, presentationTitle, slideNumber) {
     const pptSlide = pptx.addSlide({
@@ -557,7 +559,6 @@ async function addTwoColumnSlide(pptx, slide, presentationTitle, slideNumber) {
         });
         yOffset += 0.35;
     }
-    // Title
     pptSlide.addText(slide.title, {
         x: 0.5,
         y: yOffset,
@@ -568,7 +569,6 @@ async function addTwoColumnSlide(pptx, slide, presentationTitle, slideNumber) {
         color: TP_COLORS.black,
         bold: true
     });
-    // Left column
     pptSlide.addText(slide.leftContent, {
         x: 0.5,
         y: yOffset + 0.9,
@@ -579,7 +579,6 @@ async function addTwoColumnSlide(pptx, slide, presentationTitle, slideNumber) {
         color: TP_COLORS.black,
         valign: "top"
     });
-    // Right column
     pptSlide.addText(slide.rightContent, {
         x: 5.2,
         y: yOffset + 0.9,
@@ -590,7 +589,7 @@ async function addTwoColumnSlide(pptx, slide, presentationTitle, slideNumber) {
         color: TP_COLORS.black,
         valign: "top"
     });
-    await addContentFooter(pptSlide, presentationTitle, slideNumber, true);
+    await addContentFooter(pptSlide, presentationTitle, slideNumber);
 }
 async function addImageSlide(pptx, slide, presentationTitle, slideNumber) {
     const pptSlide = pptx.addSlide({
@@ -609,7 +608,6 @@ async function addImageSlide(pptx, slide, presentationTitle, slideNumber) {
         });
         yOffset += 0.35;
     }
-    // Title
     pptSlide.addText(slide.title, {
         x: 0.5,
         y: yOffset,
@@ -620,7 +618,6 @@ async function addImageSlide(pptx, slide, presentationTitle, slideNumber) {
         color: TP_COLORS.black,
         bold: true
     });
-    // Image
     const imageData = slide.imageBase64.includes("base64,") ? slide.imageBase64 : `data:image/png;base64,${slide.imageBase64}`;
     pptSlide.addImage({
         data: imageData,
@@ -634,7 +631,7 @@ async function addImageSlide(pptx, slide, presentationTitle, slideNumber) {
             h: 3.2
         }
     });
-    await addContentFooter(pptSlide, presentationTitle, slideNumber, true);
+    await addContentFooter(pptSlide, presentationTitle, slideNumber);
 }
 // ============================================
 // VALIDATION
@@ -716,7 +713,6 @@ function validateRequest(data) {
                 }
             };
         }
-        // Type-specific validation
         if (slide.type === "content" && typeof slide.content !== "string") {
             return {
                 valid: false,
@@ -819,7 +815,6 @@ async function POST(request) {
         pptx.company = "Teleperformance";
         pptx.layout = "LAYOUT_16x9";
         defineSlideMasters(pptx);
-        // Build slides - track slide number for footer
         let slideNumber = 1;
         for (const slide of slides){
             switch(slide.type){
@@ -847,8 +842,8 @@ async function POST(request) {
         const base64Data = await pptx.write({
             outputType: "base64"
         });
-        const sanitizedTitle = title.replace(/[^a-zA-Z0-9]/g, "_").substring(0, 50);
-        const fileName = `${sanitizedTitle}_${Date.now()}.pptx`;
+        const safeTitle = title.replace(/[^a-zA-Z0-9]/g, "_").substring(0, 50);
+        const fileName = `${safeTitle}_${Date.now()}.pptx`;
         return __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$server$2e$js__$5b$app$2d$route$5d$__$28$ecmascript$29$__["NextResponse"].json({
             fileName,
             fileBase64: base64Data
@@ -863,31 +858,6 @@ async function POST(request) {
             status: 500
         });
     }
-}
-async function GET() {
-    return __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$server$2e$js__$5b$app$2d$route$5d$__$28$ecmascript$29$__["NextResponse"].json({
-        status: "ok",
-        service: "TP PPT Generator API",
-        version: "2.1.0",
-        endpoints: {
-            POST: "/api/generate-ppt"
-        },
-        supportedSlideTypes: [
-            "title",
-            "chapter",
-            "content",
-            "bullets",
-            "two-column",
-            "image"
-        ],
-        slideMasters: [
-            "TP_TITLE",
-            "TP_CHAPTER",
-            "TP_CONTENT_WHITE",
-            "TP_CONTENT_BEIGE"
-        ],
-        chapterImagesConfigured: !!CHAPTER_IMAGE_BASE_URL
-    });
 }
 }),
 ];
