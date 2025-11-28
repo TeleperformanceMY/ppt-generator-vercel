@@ -1,0 +1,11 @@
+var R=require("../../../chunks/[turbopack]_runtime.js")("server/app/api/generate-ppt/route.js")
+R.c("server/chunks/[root-of-the-server]__de229520._.js")
+R.c("server/chunks/node_modules_next_07aa6078._.js")
+R.c("server/chunks/node_modules_jszip_lib_bd6479a5._.js")
+R.c("server/chunks/node_modules_pako_5efc97ef._.js")
+R.c("server/chunks/node_modules_pptxgenjs_dist_pptxgen_es_a0cf6675.js")
+R.c("server/chunks/node_modules_5f89c995._.js")
+R.c("server/chunks/[root-of-the-server]__0ffc1c75._.js")
+R.c("server/chunks/_next-internal_server_app_api_generate-ppt_route_actions_bb95c410.js")
+R.m("[project]/node_modules/next/dist/esm/build/templates/app-route.js { INNER_APP_ROUTE => \"[project]/app/api/generate-ppt/route.ts [app-route] (ecmascript)\" } [app-route] (ecmascript)")
+module.exports=R.m("[project]/node_modules/next/dist/esm/build/templates/app-route.js { INNER_APP_ROUTE => \"[project]/app/api/generate-ppt/route.ts [app-route] (ecmascript)\" } [app-route] (ecmascript)").exports

@@ -85,7 +85,7 @@ const TP_COLORS = {
   taupe: "918D80",
 }
 
-// Logo URLs (direct URLs - no filesystem access needed)
+const STATIC_ASSET_BASE_URL = process.env.STATIC_ASSET_BASE_URL || "http://localhost:3000"
 const LOGO_WHITE_URL = "/images/gmt-logo-20tp-rgb-feb-202025-white.png"
 const LOGO_BLACK_URL = "/images/gmt-logo-20tp-rgb-feb-202025-black.png"
 
@@ -98,9 +98,20 @@ const CHAPTER_IMAGE_BASE_URL = process.env.CHAPTER_IMAGE_BASE_URL || ""
 // HELPER FUNCTIONS
 // ============================================
 
+function resolveAssetUrl(url: string) {
+  if (url.startsWith("http://") || url.startsWith("https://")) {
+    return url
+  }
+  try {
+    return new URL(url, STATIC_ASSET_BASE_URL).toString()
+  } catch {
+    return url
+  }
+}
+
 async function fetchImageAsBase64(url: string): Promise<string | null> {
   try {
-    const response = await fetch(url)
+    const response = await fetch(resolveAssetUrl(url))
     if (!response.ok) return null
     const arrayBuffer = await response.arrayBuffer()
     const base64 = Buffer.from(arrayBuffer).toString("base64")
