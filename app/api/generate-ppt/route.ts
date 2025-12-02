@@ -55,7 +55,30 @@ interface ImageSlide {
   imageBase64: string
 }
 
-type Slide = TitleSlide | ChapterSlide | ContentSlide | BulletsSlide | TwoColumnSlide | ImageSlide
+interface FlowSlide {
+  type: "flow"
+  master: "TP_CONTENT_WHITE" | "TP_CONTENT_BEIGE"
+  title: string
+  headerText?: string
+  flowType: "current" | "future" // gray for current, blue for future
+  steps: string[] // array of step descriptions
+}
+
+interface ThankYouSlide {
+  type: "thankyou"
+  master: "TP_THANKYOU"
+  message?: string // defaults to "Thank you."
+}
+
+type Slide =
+  | TitleSlide
+  | ChapterSlide
+  | ContentSlide
+  | BulletsSlide
+  | TwoColumnSlide
+  | ImageSlide
+  | FlowSlide
+  | ThankYouSlide
 
 interface PresentationRequest {
   title: string
@@ -91,10 +114,12 @@ const TP_COLORS = {
   pink: "ED1E81",
   gray: "666666",
   lightGray: "CCCCCC",
+  flowGray: "8C8C8C",
+  flowGrayLight: "A8A8A8",
+  flowBlue: "4A6FA5",
+  flowBlueDark: "3A5A8C",
 }
 
-const STATIC_ASSET_BASE_URL =
-  process.env.STATIC_ASSET_BASE_URL || process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"
 const LOGO_WHITE_URL = "/images/gmt-logo-20tp-rgb-feb-202025-white.png"
 const LOGO_BLACK_URL = "/images/gmt-logo-20tp-rgb-feb-202025-black.png"
 
@@ -104,20 +129,9 @@ const CHAPTER_IMAGE_BASE_URL = process.env.CHAPTER_IMAGE_BASE_URL || ""
 // HELPER FUNCTIONS
 // ============================================
 
-function resolveAssetUrl(url: string) {
-  if (url.startsWith("http://") || url.startsWith("https://")) {
-    return url
-  }
-  try {
-    return new URL(url, STATIC_ASSET_BASE_URL).toString()
-  } catch {
-    return url
-  }
-}
-
 async function fetchImageAsBase64(url: string): Promise<string | null> {
   try {
-    const response = await fetch(resolveAssetUrl(url))
+    const response = await fetch(url)
     if (!response.ok) return null
     const arrayBuffer = await response.arrayBuffer()
     const base64 = Buffer.from(arrayBuffer).toString("base64")
@@ -167,10 +181,15 @@ function defineSlideMasters(pptx: PptxGenJS): void {
     title: "TP_CONTENT_BEIGE",
     background: { color: TP_COLORS.beige },
   })
+
+  pptx.defineSlideMaster({
+    title: "TP_THANKYOU",
+    background: { color: TP_COLORS.purple },
+  })
 }
 
 // ============================================
-// FOOTER HELPER - Adds consistent footer to content slides
+// FOOTER HELPER
 // ============================================
 
 async function addContentFooter(
@@ -186,7 +205,6 @@ async function addContentFooter(
     line: { color: TP_COLORS.black, width: 0.5 },
   })
 
-  // Black logo for white/beige backgrounds
   const logoBase64 = await fetchImageAsBase64(LOGO_BLACK_URL)
   if (logoBase64) {
     pptSlide.addImage({
@@ -219,7 +237,6 @@ async function addContentFooter(
     align: "right",
   })
 
-  // Single vertical line separator
   pptSlide.addShape("line", {
     x: 9.1,
     y: 5.08,
@@ -228,7 +245,6 @@ async function addContentFooter(
     line: { color: TP_COLORS.black, width: 0.5 },
   })
 
-  // Page number
   pptSlide.addText(slideNumber.toString(), {
     x: 9.2,
     y: 5.1,
@@ -248,7 +264,6 @@ async function addContentFooter(
 async function addTitleSlide(pptx: PptxGenJS, slide: TitleSlide): Promise<void> {
   const pptSlide = pptx.addSlide({ masterName: "TP_TITLE" })
 
-  // Main title - black text on white background
   pptSlide.addText(slide.title, {
     x: 0.5,
     y: 2.2,
@@ -262,7 +277,6 @@ async function addTitleSlide(pptx: PptxGenJS, slide: TitleSlide): Promise<void> 
     valign: "middle",
   })
 
-  // Subtitle - gray text
   if (slide.subtitle) {
     pptSlide.addText(slide.subtitle, {
       x: 0.5,
@@ -277,7 +291,6 @@ async function addTitleSlide(pptx: PptxGenJS, slide: TitleSlide): Promise<void> 
     })
   }
 
-  // Black line at bottom
   pptSlide.addShape("line", {
     x: 0.3,
     y: 5.0,
@@ -286,7 +299,6 @@ async function addTitleSlide(pptx: PptxGenJS, slide: TitleSlide): Promise<void> 
     line: { color: TP_COLORS.black, width: 0.5 },
   })
 
-  // Black logo
   const logoBase64 = await fetchImageAsBase64(LOGO_BLACK_URL)
   if (logoBase64) {
     pptSlide.addImage({
@@ -312,7 +324,6 @@ async function addTitleSlide(pptx: PptxGenJS, slide: TitleSlide): Promise<void> 
 async function addChapterSlide(pptx: PptxGenJS, slide: ChapterSlide): Promise<void> {
   const pptSlide = pptx.addSlide({ masterName: "TP_CHAPTER" })
 
-  // Right purple panel
   pptSlide.addShape("rect", {
     x: 5,
     y: 0,
@@ -322,7 +333,6 @@ async function addChapterSlide(pptx: PptxGenJS, slide: ChapterSlide): Promise<vo
     line: { color: TP_COLORS.purple },
   })
 
-  // Left side - chapter image or placeholder
   let hasImage = false
   if (slide.chapterImageBase64) {
     const imageData = slide.chapterImageBase64.includes("base64,")
@@ -352,7 +362,6 @@ async function addChapterSlide(pptx: PptxGenJS, slide: ChapterSlide): Promise<vo
     }
   }
 
-  // If no image, add beige placeholder
   if (!hasImage) {
     pptSlide.addShape("rect", {
       x: 0,
@@ -363,7 +372,6 @@ async function addChapterSlide(pptx: PptxGenJS, slide: ChapterSlide): Promise<vo
     })
   }
 
-  // White logo top-right
   const logoBase64 = await fetchImageAsBase64(LOGO_WHITE_URL)
   if (logoBase64) {
     pptSlide.addImage({
@@ -375,7 +383,6 @@ async function addChapterSlide(pptx: PptxGenJS, slide: ChapterSlide): Promise<vo
     })
   }
 
-  // Chapter number
   const formattedNumber = slide.chapterNumber.toString().padStart(2, "0")
   pptSlide.addText(formattedNumber, {
     x: 5.3,
@@ -388,7 +395,6 @@ async function addChapterSlide(pptx: PptxGenJS, slide: ChapterSlide): Promise<vo
     align: "right",
   })
 
-  // Dashed border around title
   pptSlide.addShape("rect", {
     x: 5.5,
     y: 2.5,
@@ -398,7 +404,6 @@ async function addChapterSlide(pptx: PptxGenJS, slide: ChapterSlide): Promise<vo
     line: { color: TP_COLORS.white, width: 1, dashType: "dash" },
   })
 
-  // Title text
   pptSlide.addText(slide.title, {
     x: 5.6,
     y: 2.6,
@@ -412,7 +417,6 @@ async function addChapterSlide(pptx: PptxGenJS, slide: ChapterSlide): Promise<vo
     italic: true,
   })
 
-  // Subtitle with line above
   if (slide.subtitle) {
     pptSlide.addShape("line", {
       x: 5.5,
@@ -434,7 +438,6 @@ async function addChapterSlide(pptx: PptxGenJS, slide: ChapterSlide): Promise<vo
     })
   }
 
-  // Pink bar at bottom
   pptSlide.addShape("rect", {
     x: 5,
     y: 5.43,
@@ -660,6 +663,185 @@ async function addImageSlide(
   await addContentFooter(pptSlide, presentationTitle, slideNumber)
 }
 
+async function addFlowSlide(
+  pptx: PptxGenJS,
+  slide: FlowSlide,
+  presentationTitle: string,
+  slideNumber: number,
+): Promise<void> {
+  const pptSlide = pptx.addSlide({ masterName: slide.master })
+
+  let yOffset = 0.3
+
+  if (slide.headerText) {
+    pptSlide.addText(slide.headerText, {
+      x: 0.5,
+      y: yOffset,
+      w: 9,
+      h: 0.3,
+      fontSize: 12,
+      fontFace: "Calibri",
+      color: TP_COLORS.pink,
+    })
+    yOffset += 0.35
+  }
+
+  pptSlide.addText(slide.title, {
+    x: 0.5,
+    y: yOffset,
+    w: 9,
+    h: 0.7,
+    fontSize: 32,
+    fontFace: "Calibri",
+    color: TP_COLORS.black,
+    bold: true,
+  })
+
+  // Calculate chevron dimensions based on number of steps
+  const steps = slide.steps
+  const stepCount = steps.length
+  const maxSteps = 8 // Maximum steps that fit well
+  const displaySteps = steps.slice(0, maxSteps)
+
+  const totalWidth = 9.0 // Available width
+  const chevronHeight = 0.9
+  const chevronWidth = totalWidth / Math.min(stepCount, maxSteps)
+  const overlap = 0.15 // Chevron overlap for arrow effect
+  const startX = 0.5
+  const startY = yOffset + 1.5
+
+  // Colors based on flow type
+  const isCurrentFlow = slide.flowType === "current"
+  const fillColor = isCurrentFlow ? TP_COLORS.flowGray : TP_COLORS.flowBlue
+  const darkColor = isCurrentFlow ? TP_COLORS.gray : TP_COLORS.flowBlueDark
+
+  // Draw chevron shapes for each step
+  displaySteps.forEach((step, index) => {
+    const x = startX + index * (chevronWidth - overlap)
+
+    // Create chevron/arrow shape using a pentagon
+    // PptxGenJS doesn't have native chevron, so we use rounded rectangles with gradient effect
+    pptSlide.addShape("roundRect", {
+      x: x,
+      y: startY,
+      w: chevronWidth,
+      h: chevronHeight,
+      fill: { color: index % 2 === 0 ? fillColor : darkColor },
+      line: { color: TP_COLORS.white, width: 1 },
+      rectRadius: 0.1,
+    })
+
+    // Add arrow point overlay on right side (except last)
+    if (index < displaySteps.length - 1) {
+      pptSlide.addShape("triangle", {
+        x: x + chevronWidth - 0.15,
+        y: startY,
+        w: 0.2,
+        h: chevronHeight,
+        fill: { color: (index + 1) % 2 === 0 ? fillColor : darkColor },
+        line: { type: "none" },
+        rotate: 0,
+      })
+    }
+
+    // Add step text centered in the chevron
+    pptSlide.addText(step, {
+      x: x + 0.1,
+      y: startY + 0.1,
+      w: chevronWidth - 0.2,
+      h: chevronHeight - 0.2,
+      fontSize: stepCount > 6 ? 8 : stepCount > 4 ? 9 : 10,
+      fontFace: "Calibri",
+      color: TP_COLORS.white,
+      align: "center",
+      valign: "middle",
+      wrap: true,
+    })
+  })
+
+  // Add indicator if there are more steps than displayed
+  if (stepCount > maxSteps) {
+    pptSlide.addText(`+${stepCount - maxSteps} more steps...`, {
+      x: 0.5,
+      y: startY + chevronHeight + 0.2,
+      w: 9,
+      h: 0.3,
+      fontSize: 10,
+      fontFace: "Calibri",
+      color: TP_COLORS.gray,
+      align: "right",
+    })
+  }
+
+  await addContentFooter(pptSlide, presentationTitle, slideNumber)
+}
+
+async function addThankYouSlide(pptx: PptxGenJS, slide: ThankYouSlide): Promise<void> {
+  const pptSlide = pptx.addSlide({ masterName: "TP_THANKYOU" })
+
+  // "eai" logo text in top-left (styled as in screenshot)
+  pptSlide.addText("eai", {
+    x: 0.4,
+    y: 0.3,
+    w: 0.5,
+    h: 0.5,
+    fontSize: 28,
+    fontFace: "Calibri",
+    color: TP_COLORS.white,
+    bold: true,
+  })
+
+  // "Emotional and Artificial Intelligence" text
+  pptSlide.addText("Emotional\nand Artificial\nIntelligence", {
+    x: 0.95,
+    y: 0.25,
+    w: 1.5,
+    h: 0.7,
+    fontSize: 9,
+    fontFace: "Calibri",
+    color: TP_COLORS.white,
+    lineSpacing: 12,
+  })
+
+  // "Thank you." text on left side
+  const message = slide.message || "Thank you."
+  pptSlide.addText(message, {
+    x: 0.4,
+    y: 2.5,
+    w: 3,
+    h: 0.8,
+    fontSize: 36,
+    fontFace: "Calibri Light",
+    color: TP_COLORS.white,
+    align: "left",
+    valign: "middle",
+  })
+
+  // Large white TP logo in center
+  const logoBase64 = await fetchImageAsBase64(LOGO_WHITE_URL)
+  if (logoBase64) {
+    pptSlide.addImage({
+      data: logoBase64,
+      x: 4.0,
+      y: 1.8,
+      w: 2.0,
+      h: 2.0,
+    })
+  }
+
+  // "tp.com" text with underline next to logo
+  pptSlide.addText("tp.com", {
+    x: 6.2,
+    y: 2.5,
+    w: 1.5,
+    h: 0.5,
+    fontSize: 24,
+    fontFace: "Calibri",
+    color: TP_COLORS.pink,
+    underline: { style: "sng", color: TP_COLORS.pink },
+  })
+}
+
 // ============================================
 // VALIDATION
 // ============================================
@@ -702,8 +884,8 @@ function validateRequest(
     }
   }
 
-  const validTypes = ["title", "chapter", "content", "bullets", "two-column", "image"]
-  const validMasters = ["TP_TITLE", "TP_CHAPTER", "TP_CONTENT_WHITE", "TP_CONTENT_BEIGE"]
+  const validTypes = ["title", "chapter", "content", "bullets", "two-column", "image", "flow", "thankyou"]
+  const validMasters = ["TP_TITLE", "TP_CHAPTER", "TP_CONTENT_WHITE", "TP_CONTENT_BEIGE", "TP_THANKYOU"]
 
   for (let i = 0; i < req.slides.length; i++) {
     const slide = req.slides[i] as Record<string, unknown>
@@ -730,7 +912,7 @@ function validateRequest(
       }
     }
 
-    if (!slide.title || typeof slide.title !== "string") {
+    if (slide.type !== "thankyou" && (!slide.title || typeof slide.title !== "string")) {
       return {
         valid: false,
         error: {
@@ -789,6 +971,28 @@ function validateRequest(
           error: `Missing imageBase64 in image slide at index ${i}`,
           code: "MISSING_IMAGE",
         },
+      }
+    }
+
+    if (slide.type === "flow") {
+      if (!Array.isArray(slide.steps) || slide.steps.length === 0) {
+        return {
+          valid: false,
+          error: {
+            error: `Missing steps array in flow slide at index ${i}`,
+            code: "MISSING_STEPS",
+          },
+        }
+      }
+      if (slide.flowType !== "current" && slide.flowType !== "future") {
+        return {
+          valid: false,
+          error: {
+            error: `Invalid flowType in flow slide at index ${i}`,
+            code: "INVALID_FLOW_TYPE",
+            details: "flowType must be 'current' or 'future'",
+          },
+        }
       }
     }
   }
@@ -878,13 +1082,19 @@ export async function POST(request: NextRequest): Promise<NextResponse<Presentat
         case "image":
           await addImageSlide(pptx, slide, title, slideNumber)
           break
+        case "flow":
+          await addFlowSlide(pptx, slide, title, slideNumber)
+          break
+        case "thankyou":
+          await addThankYouSlide(pptx, slide)
+          break
       }
       slideNumber++
     }
 
     const base64Data = await pptx.write({ outputType: "base64" })
-    const safeTitle = title.replace(/[^a-zA-Z0-9]/g, "_").substring(0, 50)
-    const fileName = `${safeTitle}_${Date.now()}.pptx`
+    const sanitizedTitle = title.replace(/[^a-zA-Z0-9]/g, "_")
+    const fileName = `${sanitizedTitle}_${Date.now()}.pptx`
 
     return NextResponse.json({
       fileName,
@@ -896,7 +1106,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<Presentat
       {
         error: "Internal server error",
         code: "INTERNAL_ERROR",
-        details: error instanceof Error ? error.message : "Unknown error occurred",
+        details: error instanceof Error ? error.message : "Unknown error",
       },
       { status: 500 },
     )
